@@ -36,7 +36,7 @@ momentum_score = annualized_exponential_regression_slope * r_squared
 - Applies configurable price, liquidity, positive-slope, and trend filters.
 - Saves rankings to `data/processed/momentum_rankings.parquet` and `.csv`.
 
-1. `notebooks/03_portfolio_targets.ipynb`
+3. `notebooks/03_portfolio_targets.ipynb`
   - Edit `ACCOUNT_VALUE`, `AVAILABLE_CASH`, and optional `EXISTING_POSITIONS`.
   - Calculates target shares with:
 
@@ -46,6 +46,17 @@ shares = AccountValue * 0.001 / ATR20
 
 - Walks down the ranked list and adds buys while enough cash remains.
 - Saves `data/processed/buy_list.csv` and `data/processed/buy_list_diagnostics.csv`.
+
+4. `notebooks/04_backtest_weekly_strategy.ipynb`
+  - Backtests the weekly strategy over a configurable number of weeks.
+  - Uses signals through the prior trading day and executes trades at the configured weekday
+    open, defaulting to Wednesday.
+  - Prints progress for each rebalance cycle when `SHOW_PROGRESS = True`.
+  - Compares the strategy equity curve with buy-and-hold `INDEX_PROXY`.
+  - Shows performance ratios including total return, CAGR, volatility, Sharpe, drawdown, and
+    Calmar.
+  - Saves `backtest_equity_curve.csv`, `backtest_trades.csv`, `backtest_holdings.csv`, and
+    `backtest_rebalance_log.csv`.
 
 ## Key Parameters
 
@@ -65,6 +76,27 @@ Portfolio sizing defaults live in `notebooks/03_portfolio_targets.ipynb`:
 points of account value.
 - `ALLOW_PARTIAL_FINAL_POSITION = False`, so the notebook skips candidates when it cannot
 afford the full suggested share count.
+
+Backtest defaults live in `notebooks/04_backtest_weekly_strategy.ipynb` via `BacktestConfig`:
+
+- `trade_weekday=2`, where Monday is 0 and Wednesday is 2.
+- `index_proxy="SPY"`, with positive trend defined as the prior close above its 100-day
+  moving average.
+- `top_fraction=0.20`, used for the top-20% hold/buy rule.
+- `gap_threshold=0.15`, using open-to-close candle gaps over the ranking lookback window.
+- `slippage_bps=5.0`, applied to buys and sells.
+- `risk_rebalance_every_n_trades=2`, so risk resizing runs every second Wednesday.
+- `risk_rebalance_threshold=0.20`, so minor ATR-dollar risk deviations are ignored.
+
+## Backtest Assumptions
+
+The first backtest version uses the current S&P 500 member list for the whole historical
+test. That makes it useful for workflow testing and rough strategy exploration, but it has
+survivor bias. A stricter historical test would need point-in-time index constituents.
+
+Signals are built without same-day lookahead: for a Wednesday rebalance, rankings and sell
+rules use data through Tuesday close, then trades execute at Wednesday open. If Wednesday is
+not a trading day in the cached data, that week is skipped.
 
 ## Notes
 

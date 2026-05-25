@@ -32,6 +32,18 @@ def add_atr(prices: pd.DataFrame, *, window: int = 20) -> pd.DataFrame:
     return prices
 
 
+def candle_gap(prices: pd.DataFrame) -> pd.Series:
+    """Calculate the absolute open-to-close move for each daily candle."""
+    return (prices["Open"] / prices["Close"] - 1).abs()
+
+
+def add_candle_gap(prices: pd.DataFrame) -> pd.DataFrame:
+    """Add a single-candle open/close gap column."""
+    prices = prices.copy()
+    prices["candle_gap"] = candle_gap(prices)
+    return prices
+
+
 def exponential_regression_momentum(
     prices: pd.Series,
     *,
@@ -58,6 +70,7 @@ def summarize_ticker(
     lookback_days: int = 90,
     atr_window: int = 20,
     trend_ma_window: int = 100,
+    gap_window: int = 90,
     trading_days: int = 252,
 ) -> dict[str, float | str | pd.Timestamp | bool]:
     """Summarize one ticker with the latest price, ATR, trend, and momentum score."""
@@ -73,6 +86,11 @@ def summarize_ticker(
     prices["avg_dollar_volume_20"] = (
         prices["Adj Close"] * prices["Volume"]
     ).rolling(window=20, min_periods=20).mean()
+    prices["candle_gap"] = candle_gap(prices)
+    prices[f"max_gap_{gap_window}"] = prices["candle_gap"].rolling(
+        window=gap_window,
+        min_periods=1,
+    ).max()
 
     recent = prices.tail(lookback_days)
     slope, r_squared, score = exponential_regression_momentum(
@@ -87,6 +105,8 @@ def summarize_ticker(
         f"ATR{atr_window}": float(latest[f"ATR{atr_window}"]),
         f"MA{trend_ma_window}": float(latest[f"MA{trend_ma_window}"]),
         "avg_dollar_volume_20": float(latest["avg_dollar_volume_20"]),
+        "candle_gap": float(latest["candle_gap"]),
+        f"max_gap_{gap_window}": float(latest[f"max_gap_{gap_window}"]),
         "annualized_slope": slope,
         "r_squared": r_squared,
         "momentum_score": score,
@@ -101,11 +121,12 @@ def summarize_universe(
     lookback_days: int = 90,
     atr_window: int = 20,
     trend_ma_window: int = 100,
+    gap_window: int = 90,
     trading_days: int = 252,
 ) -> pd.DataFrame:
     """Create one latest-row indicator summary per ticker."""
     summaries = []
-    required_columns = {"date", "ticker", "High", "Low", "Close", "Adj Close"}
+    required_columns = {"date", "ticker", "High", "Low", "Close", "Adj Close", "Volume"}
     missing = required_columns.difference(prices.columns)
     if missing:
         raise ValueError(f"Missing required price columns: {sorted(missing)}")
@@ -119,6 +140,7 @@ def summarize_universe(
                 lookback_days=lookback_days,
                 atr_window=atr_window,
                 trend_ma_window=trend_ma_window,
+                gap_window=gap_window,
                 trading_days=trading_days,
             )
         )

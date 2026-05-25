@@ -53,6 +53,11 @@ def get_sp500_tickers() -> list[str]:
     return fetch_sp500_constituents()["yahoo_ticker"].tolist()
 
 
+def with_extra_tickers(tickers: Iterable[str], extra_tickers: Iterable[str]) -> list[str]:
+    """Return Yahoo-formatted tickers plus any additional symbols, deduplicated."""
+    return sorted({to_yahoo_symbol(ticker) for ticker in [*tickers, *extra_tickers]})
+
+
 def download_ohlcv(
     tickers: Iterable[str],
     *,
