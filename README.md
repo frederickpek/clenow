@@ -58,6 +58,42 @@ shares = account_value * daily_move_target / atr_20
   - Saves `backtest_equity_curve.csv`, `backtest_trades.csv`, `backtest_holdings.csv`, and
     `backtest_rebalance_log.csv`.
 
+## Latest Backtest Snapshot
+
+These results come from the cached notebook outputs in `data/processed/`, covering 52 weekly
+rebalance dates from 2025-05-28 to 2026-05-20. This run used the current S&P 500 universe,
+so the survivor-bias caveat below applies.
+
+| Series | Final Value | Total Return | CAGR | Annual Volatility | Sharpe | Max Drawdown | Calmar |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Strategy | $160,368.90 | 60.45% | 62.21% | 16.74% | 2.98 | -6.36% | 9.78 |
+| Buy & Hold SPY | $124,367.78 | 24.37% | 25.00% | 10.34% | 2.20 | -6.19% | 4.04 |
+
+The run produced 436 trades and ended with 44 open positions.
+
+![Strategy vs Buy & Hold SPY](docs/assets/backtest_strategy_vs_spy.png)
+
+
+## Weekly Rebalance Rules
+
+```mermaid
+flowchart TD
+    Holding[Current Holding] --> InRanking{Has Valid Ranking Data}
+    InRanking -->|No| SellMissing[Sell Missing Or Left Universe]
+    InRanking -->|Yes| TopTwenty{Still In Top 20 Percent}
+    TopTwenty -->|No| SellRank[Sell Outside Top 20 Percent]
+    TopTwenty -->|Yes| AboveMA{Above 100 Day MA}
+    AboveMA -->|No| SellMA[Sell Below Trend MA]
+    AboveMA -->|Yes| GapCheck{Large Gap Under Threshold}
+    GapCheck -->|No| SellGap[Sell Large Gap]
+    GapCheck -->|Yes| KeepHolding[Keep Holding]
+    KeepHolding --> SecondWednesday{Second Wednesday}
+    SecondWednesday -->|No| Done[Done]
+    SecondWednesday -->|Yes| RiskCheck{ATR Risk Deviation Exceeds Threshold}
+    RiskCheck -->|No| Done
+    RiskCheck -->|Yes| ResizePosition[Resize To Target ATR Risk]
+```
+
 ## Key Parameters
 
 Ranking defaults live in `notebooks/02_rank_momentum.ipynb` via `RankingConfig`:
