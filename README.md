@@ -41,7 +41,7 @@ momentum_score = annualized_exponential_regression_slope * r_squared
   - Calculates target shares with:
 
 ```text
-shares = AccountValue * 0.001 / ATR20
+shares = account_value * daily_move_target / atr_20
 ```
 
 - Walks down the ranked list and adds buys while enough cash remains.

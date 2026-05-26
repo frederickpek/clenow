@@ -14,7 +14,7 @@ def size_position(
     atr: float,
     daily_move_target: float = 0.001,
 ) -> int:
-    """Calculate target shares using AccountValue * daily_move_target / ATR."""
+    """Calculate target shares using account_value * daily_move_target / atr."""
     if account_value <= 0:
         raise ValueError("account_value must be positive.")
     if atr <= 0:
